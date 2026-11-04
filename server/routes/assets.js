@@ -71,6 +71,36 @@ router.get('/available', async (req, res) => {
   }
 })
 
+// GET /api/assets/:id/rental-history
+router.get('/:id/rental-history', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT
+          r.id,
+          r.rental_number,
+          r.start_date,
+          r.expected_end_date,
+          r.actual_end_date,
+          r.status,
+          r.total_amount,
+          c.name AS customer_name,
+          c.phone AS customer_phone,
+          ri.daily_rate,
+          ri.days_rented,
+          ri.subtotal
+       FROM rental_items ri
+       JOIN rentals r ON r.id = ri.rental_id
+       JOIN customers c ON c.id = r.customer_id
+       WHERE ri.asset_id = $1
+       ORDER BY r.start_date DESC`,
+      [req.params.id]
+    )
+    res.json(result.rows)
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+})
+
 // GET /api/assets/:id
 router.get('/:id', async (req, res) => {
   try {

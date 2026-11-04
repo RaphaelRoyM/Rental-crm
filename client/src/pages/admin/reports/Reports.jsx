@@ -3,7 +3,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, LineChart, Line, ResponsiveContainer
 } from 'recharts'
-import { AlertTriangle, TrendingUp, Package, Users, Calendar } from 'lucide-react'
+import { AlertTriangle, TrendingUp, Package, Users, Calendar, Download } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import api from '../../../lib/api'
 import PageHeader from '../../../components/common/PageHeader'
 import Spinner    from '../../../components/common/Spinner'
@@ -72,6 +73,68 @@ export default function AdminReports() {
   const totalLate   = revenue.reduce((s, r) => s + r['Late Fee'], 0)
   const totalDamage = revenue.reduce((s, r) => s + r.Damage, 0)
 
+  // Export functions
+  const exportRevenue = () => {
+    const data = revenue.map(r => ({
+      'Month': r.month,
+      'Rent Revenue (₹)': r.Rent,
+      'Late Fee (₹)': r['Late Fee'],
+      'Damage Fee (₹)': r.Damage,
+      'Total (₹)': r.total
+    }))
+    const ws = XLSX.utils.json_to_sheet(data)
+    ws['!cols'] = [{ wch: 12 }, { wch: 15 }, { wch: 12 }, { wch: 14 }, { wch: 12 }]
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Revenue')
+    XLSX.writeFile(wb, `Revenue_Report_${new Date().toISOString().split('T')[0]}.xlsx`)
+  }
+
+  const exportUtilization = () => {
+    const data = utilization.map(u => ({
+      'Tool': u.tool_name,
+      'Asset ID': u.asset_id,
+      'Category': u.category,
+      'Status': u.status,
+      'Rentals': u.total_rentals,
+      'Days Rented': u.total_days_rented,
+      'Revenue (₹)': parseFloat(u.total_revenue)
+    }))
+    const ws = XLSX.utils.json_to_sheet(data)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Utilization')
+    XLSX.writeFile(wb, `Utilization_Report_${new Date().toISOString().split('T')[0]}.xlsx`)
+  }
+
+  const exportOverdue = () => {
+    const data = overdue.map(r => ({
+      'Rental #': r.rental_number,
+      'Customer': r.customer_name,
+      'Phone': r.customer_phone,
+      'Due Date': new Date(r.expected_end_date).toLocaleDateString('en-IN'),
+      'Days Overdue': r.days_overdue,
+      'Amount Due (₹)': parseFloat(r.amount_due || 0)
+    }))
+    const ws = XLSX.utils.json_to_sheet(data)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Overdue')
+    XLSX.writeFile(wb, `Overdue_Report_${new Date().toISOString().split('T')[0]}.xlsx`)
+  }
+
+  const exportTopCustomers = () => {
+    const data = topCustomers.map((c, i) => ({
+      'Rank': i + 1,
+      'Customer': c.name,
+      'Phone': c.phone,
+      'Email': c.email || '—',
+      'Rentals': c.total_rentals,
+      'Total Spent (₹)': parseFloat(c.total_spent)
+    }))
+    const ws = XLSX.utils.json_to_sheet(data)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Top Customers')
+    XLSX.writeFile(wb, `Top_Customers_${new Date().toISOString().split('T')[0]}.xlsx`)
+  }
+
   const tabs = [
     { id: 'revenue',     label: 'Revenue',       icon: TrendingUp },
     { id: 'utilization', label: 'Utilization',   icon: Package },
@@ -123,6 +186,11 @@ export default function AdminReports() {
                 <p className="text-xs text-gray-400 mt-0.5">{revenue.length} month{revenue.length !== 1 ? 's' : ''} of data</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                {/* Export button */}
+                <button onClick={exportRevenue} disabled={!revenue.length}
+                  className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1.5">
+                  <Download size={12} /> Export
+                </button>
                 {/* Quick filters */}
                 {[
                   { label: 'This Month', fn: getThisMonth },
@@ -206,9 +274,15 @@ export default function AdminReports() {
       {/* ── UTILIZATION TAB ─────────────────────────────────── */}
       {tab === 'utilization' && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h3 className="font-semibold text-gray-700">Product Utilization</h3>
-            <p className="text-xs text-gray-400 mt-0.5">Rental frequency and revenue per asset</p>
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-gray-700">Product Utilization</h3>
+              <p className="text-xs text-gray-400 mt-0.5">Rental frequency and revenue per asset</p>
+            </div>
+            <button onClick={exportUtilization} disabled={!utilization.length}
+              className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition flex items-center gap-1.5">
+              <Download size={12} /> Export
+            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -244,10 +318,14 @@ export default function AdminReports() {
       {/* ── OVERDUE TAB ─────────────────────────────────────── */}
       {tab === 'overdue' && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 bg-red-50">
+          <div className="px-5 py-4 border-b border-gray-100 bg-red-50 flex items-center justify-between">
             <h3 className="font-semibold text-red-700 flex items-center gap-2">
               <AlertTriangle size={16} /> Overdue Rentals ({overdue.length})
             </h3>
+            <button onClick={exportOverdue} disabled={!overdue.length}
+              className="px-3 py-1.5 text-xs rounded-lg border border-red-200 text-red-600 hover:bg-red-100 disabled:opacity-40 transition flex items-center gap-1.5">
+              <Download size={12} /> Export
+            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -280,8 +358,12 @@ export default function AdminReports() {
       {/* ── TOP CUSTOMERS TAB ───────────────────────────────── */}
       {tab === 'customers' && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
             <h3 className="font-semibold text-gray-700">Top 10 Customers by Spend</h3>
+            <button onClick={exportTopCustomers} disabled={!topCustomers.length}
+              className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition flex items-center gap-1.5">
+              <Download size={12} /> Export
+            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

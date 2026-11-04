@@ -1,8 +1,8 @@
-import { Pencil, Trash2, Plus } from 'lucide-react'
+import { Pencil, Trash2, Plus, History } from 'lucide-react'
 import Badge from '../../../components/common/Badge'
 import Button from '../../../components/common/Button'
 
-export default function AssetTable({ assets, onAdd, onEdit, onDelete }) {
+export default function AssetTable({ assets, onAdd, onEdit, onDelete, onViewHistory }) {
   return (
     <div className="mt-3">
       <div className="flex items-center justify-between mb-2">
@@ -42,10 +42,13 @@ export default function AssetTable({ assets, onAdd, onEdit, onDelete }) {
                   </td>
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-1">
-                      <button onClick={() => onEdit(a)} className="p-1.5 hover:bg-indigo-50 rounded text-gray-400 hover:text-indigo-600 transition">
+                      <button onClick={() => onViewHistory(a)} className="p-1.5 hover:bg-blue-50 rounded text-gray-400 hover:text-blue-600 transition" title="Rental History">
+                        <History size={14} />
+                      </button>
+                      <button onClick={() => onEdit(a)} className="p-1.5 hover:bg-indigo-50 rounded text-gray-400 hover:text-indigo-600 transition" title="Edit">
                         <Pencil size={14} />
                       </button>
-                      <button onClick={() => onDelete(a)} className="p-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-500 transition">
+                      <button onClick={() => onDelete(a)} className="p-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-500 transition" title="Delete">
                         <Trash2 size={14} />
                       </button>
                     </div>

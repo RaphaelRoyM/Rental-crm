@@ -19,7 +19,7 @@ export default function Login() {
       const user = await login(form.email, form.password)
       navigate(user.role === 'admin' ? '/admin' : '/ops', { replace: true })
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid email or password.')
+      setError(err.response?.data?.message || 'Invalid username or password')
       setLoading(false)
     }
   }

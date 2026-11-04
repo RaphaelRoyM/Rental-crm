@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, Search, Package } from 'lucide-react'
+import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, Search, Package, Download, History } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import api from '../../../lib/api'
 import PageHeader     from '../../../components/common/PageHeader'
 import Button         from '../../../components/common/Button'
@@ -30,6 +31,8 @@ export default function AdminProducts() {
   const [confirmAsset, setConfirmAsset] = useState(null)  // asset to delete
   const [saving, setSaving]           = useState(false)
   const [error, setError]             = useState('')
+  const [rentalHistory, setRentalHistory] = useState(null) // asset rental history
+  const [historyLoading, setHistoryLoading] = useState(false)
 
   const fetchAll = async () => {
     try {
@@ -39,7 +42,7 @@ export default function AdminProducts() {
         api.get('/categories'),
       ])
       setToolTypes(tt.data)
-      setSuppliers(sup.data)
+      setSuppliers(sup.data.data || sup.data)
       setCategories(cats.data.map(c => c.name))
     } catch (e) {
       console.error(e)
@@ -51,6 +54,80 @@ export default function AdminProducts() {
   useEffect(() => { fetchAll() }, [])
 
   const toggle = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }))
+
+  // ── Export Functions ─────────────────────────────────────
+  const exportCategories = () => {
+    try {
+      const data = toolTypes.map(tt => ({
+        'Tool ID': tt.tool_id,
+        'Name': tt.name,
+        'Brand': tt.brand || '',
+        'Model': tt.model_number || '',
+        'Category': tt.category,
+        'Power Type': tt.power_type || '',
+        'Daily Rate (₹)': parseFloat(tt.default_daily_rate || 0),
+        'Security Deposit (₹)': parseFloat(tt.security_deposit || 0),
+        'Total Units': tt.total_assets || 0,
+        'Available': tt.available_count || 0,
+        'Rented': tt.rented_count || 0,
+        'Active': tt.is_active ? 'Yes' : 'No'
+      }))
+      const ws = XLSX.utils.json_to_sheet(data)
+      ws['!cols'] = Object.keys(data[0] || {}).map(k => ({ wch: Math.max(k.length, 12) }))
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Product Categories')
+      XLSX.writeFile(wb, `Product_Categories_${new Date().toISOString().split('T')[0]}.xlsx`)
+    } catch (e) {
+      console.error(e)
+      alert('Export failed')
+    }
+  }
+
+  const exportAllAssets = () => {
+    try {
+      const data = []
+      toolTypes.forEach(tt => {
+        tt.assets?.forEach(a => {
+          data.push({
+            'Category': tt.name,
+            'Brand': tt.brand || '',
+            'Asset ID': a.asset_id,
+            'Serial No.': a.serial_number || '',
+            'Condition': a.condition,
+            'Status': a.status,
+            'Location': a.storage_location || '',
+            'Purchase Date': a.purchase_date ? new Date(a.purchase_date).toLocaleDateString('en-IN') : '',
+            'Purchase Price (₹)': parseFloat(a.purchase_price || 0),
+            'Supplier': a.supplier_name || '',
+            'Next Maintenance': a.next_maintenance_date ? new Date(a.next_maintenance_date).toLocaleDateString('en-IN') : ''
+          })
+        })
+      })
+      const ws = XLSX.utils.json_to_sheet(data)
+      ws['!cols'] = Object.keys(data[0] || {}).map(k => ({ wch: Math.max(k.length, 12) }))
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'All Assets')
+      XLSX.writeFile(wb, `All_Assets_${new Date().toISOString().split('T')[0]}.xlsx`)
+    } catch (e) {
+      console.error(e)
+      alert('Export failed')
+    }
+  }
+
+  // ── Rental History ───────────────────────────────────────
+  const viewRentalHistory = async (asset) => {
+    setRentalHistory({ asset, rentals: [] })
+    setHistoryLoading(true)
+    try {
+      const r = await api.get(`/assets/${asset.id}/rental-history`)
+      setRentalHistory({ asset, rentals: r.data })
+    } catch (e) {
+      console.error(e)
+      alert('Failed to load rental history')
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
 
   const filtered = toolTypes.filter(tt => {
     const matchSearch = !search ||
@@ -134,9 +211,11 @@ export default function AdminProducts() {
         title="Products & Assets"
         subtitle="Manage tool catalogue and individual units"
         actions={
-          <Button onClick={openAddTt}>
-            <Plus size={16} /> Add Tool Type
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={exportAllAssets}><Download size={16} /> Export Assets</Button>
+            <Button variant="secondary" onClick={exportCategories}><Download size={16} /> Export Categories</Button>
+            <Button onClick={openAddTt}><Plus size={16} /> Add Tool Type</Button>
+          </div>
         }
       />
 
@@ -258,6 +337,7 @@ export default function AdminProducts() {
                     onAdd={() => openAddAsset(tt)}
                     onEdit={(asset) => openEditAsset(tt, asset)}
                     onDelete={(asset) => setConfirmAsset(asset)}
+                    onViewHistory={viewRentalHistory}
                   />
                 </div>
               )}
@@ -318,11 +398,59 @@ export default function AdminProducts() {
         isOpen={!!confirmAsset}
         onClose={() => setConfirmAsset(null)}
         onConfirm={deleteAsset}
-        title="Delete Asset Unit"
-        message={`Delete unit ${confirmAsset?.asset_id}${confirmAsset?.serial_number ? ` (${confirmAsset.serial_number})` : ''}? This cannot be undone.`}
+        title="Delete Asset"
+        message={`Delete unit "${confirmAsset?.asset_id}"? This cannot be undone.`}
         confirmLabel="Delete"
         variant="danger"
       />
+
+      {/* Rental History Modal */}
+      {rentalHistory && (
+        <Modal isOpen={!!rentalHistory} onClose={() => setRentalHistory(null)} title={`Rental History — ${rentalHistory.asset.asset_id}`} size="lg">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div>
+                <p className="font-medium text-gray-800">{rentalHistory.asset.tool_name}</p>
+                <p className="text-sm text-gray-500">Serial: {rentalHistory.asset.serial_number || '—'}</p>
+              </div>
+              <Badge label={rentalHistory.asset.status} />
+            </div>
+
+            {historyLoading ? (
+              <div className="py-8 text-center text-gray-400">Loading...</div>
+            ) : rentalHistory.rentals.length === 0 ? (
+              <div className="py-8 text-center text-gray-400">No rental history</div>
+            ) : (
+              <div className="overflow-x-auto rounded-lg border border-gray-100">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      {['Rental #', 'Customer', 'Phone', 'Start', 'Return', 'Status', 'Revenue'].map(h => (
+                        <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {rentalHistory.rentals.map(r => (
+                      <tr key={r.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-2.5 font-medium text-indigo-600">{r.rental_number}</td>
+                        <td className="px-4 py-2.5 text-gray-700">{r.customer_name}</td>
+                        <td className="px-4 py-2.5 text-gray-500">{r.customer_phone}</td>
+                        <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap">{new Date(r.start_date).toLocaleDateString('en-IN')}</td>
+                        <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap">
+                          {r.actual_end_date ? new Date(r.actual_end_date).toLocaleDateString('en-IN') : '—'}
+                        </td>
+                        <td className="px-4 py-2.5"><Badge label={r.status} /></td>
+                        <td className="px-4 py-2.5 font-medium text-green-600">₹{parseFloat(r.subtotal || 0).toLocaleString('en-IN')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }

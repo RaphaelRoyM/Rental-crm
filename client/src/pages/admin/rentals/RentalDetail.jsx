@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Truck, RotateCcw, XCircle, Plus, Camera, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Truck, RotateCcw, XCircle, Plus, Camera, AlertTriangle, Download } from 'lucide-react'
 import api from '../../../lib/api'
+import { downloadRentalBill } from '../../../lib/downloadBill'
 import Badge   from '../../../components/common/Badge'
 import Button  from '../../../components/common/Button'
 import Modal   from '../../../components/common/Modal'
@@ -331,6 +332,9 @@ export default function AdminRentalDetail() {
           )}
           {rental.status === 'active' && (
             <Button variant="warning" onClick={() => setReturnModal(true)}><RotateCcw size={15} /> Process Return</Button>
+          )}
+          {['active', 'returned'].includes(rental.status) && (
+            <Button variant="secondary" onClick={() => downloadRentalBill(rental)}><Download size={15} /> Download Bill</Button>
           )}
           {['active', 'returned'].includes(rental.status) && (
             <Button variant="secondary" onClick={() => setPayModal(true)}><Plus size={15} /> Add Payment</Button>

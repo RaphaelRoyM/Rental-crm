@@ -45,7 +45,7 @@ function StepCustomer({ selected, onSelect, preselected }) {
       setLoading(true)
       try {
         const r = await api.get(`/customers${search ? `?search=${search}` : ''}`)
-        setCustomers(r.data)
+        setCustomers(r.data.data || r.data)
       } catch (e) { console.error(e) }
       finally { setLoading(false) }
     }, search ? 300 : 0)
