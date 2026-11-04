@@ -9,7 +9,7 @@ import Modal   from '../../../components/common/Modal'
 import Spinner from '../../../components/common/Spinner'
 
 function ReturnModal({ rental, onClose, onDone }) {
-  const [form, setForm]   = useState({ actual_end_date: new Date().toISOString().split('T')[0], damage_fee: '', notes: '' })
+  const [form, setForm]   = useState({ actual_end_date: new Date().toISOString().split('T')[0], damage_fee: '', discount_amount: '', discount_reason: '', notes: '' })
   const [itemDamages, setItemDamages] = useState(
     () => (rental.items || []).map(item => ({
       asset_id: item.asset_uuid, asset_code: item.asset_code,
@@ -92,6 +92,24 @@ function ReturnModal({ rental, onClose, onDone }) {
         <input type="number" min="0" step="0.01" value={form.damage_fee}
           onChange={e => setForm(f => ({ ...f, damage_fee: e.target.value }))} placeholder="0.00"
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100" />
+      </div>
+      {/* Discount/Waiver */}
+      <div className="bg-green-50 border border-green-100 rounded-lg p-3 space-y-2">
+        <p className="text-sm font-medium text-green-700">💰 Discount / Waiver (Optional)</p>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Amount (₹)</label>
+            <input type="number" min="0" step="0.01" value={form.discount_amount}
+              onChange={e => setForm(f => ({ ...f, discount_amount: e.target.value }))} placeholder="0.00"
+              className="w-full border border-green-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-green-400 bg-white" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Reason {parseFloat(form.discount_amount||0)>0&&<span className="text-red-500">*</span>}</label>
+            <input value={form.discount_reason} required={parseFloat(form.discount_amount||0)>0}
+              onChange={e => setForm(f => ({ ...f, discount_reason: e.target.value }))} placeholder="e.g., Early return"
+              className="w-full border border-green-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-green-400 bg-white" />
+          </div>
+        </div>
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
@@ -326,6 +344,7 @@ export default function OpsRentalDetail() {
               <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span>₹{parseFloat(rental.subtotal||0).toLocaleString('en-IN')}</span></div>
               {parseFloat(rental.late_fee)>0 && <div className="flex justify-between text-orange-600"><span>Late Fee</span><span>₹{parseFloat(rental.late_fee).toLocaleString('en-IN')}</span></div>}
               {parseFloat(rental.damage_fee)>0 && <div className="flex justify-between text-red-600"><span>Damage Fee</span><span>₹{parseFloat(rental.damage_fee).toLocaleString('en-IN')}</span></div>}
+              {parseFloat(rental.discount_amount||0)>0 && <div className="flex justify-between text-green-600"><span>Discount</span><span>−₹{parseFloat(rental.discount_amount).toLocaleString('en-IN')}</span></div>}
               <div className="flex justify-between font-bold text-gray-800 pt-1.5 border-t border-gray-100"><span>Total</span><span>₹{parseFloat(rental.total_amount||0).toLocaleString('en-IN')}</span></div>
               <div className="flex justify-between text-green-600"><span>Collected</span><span>₹{totalPaid.toLocaleString('en-IN')}</span></div>
               {depositDeducted>0 && <div className="flex justify-between text-rose-600"><span>From Deposit</span><span>₹{depositDeducted.toLocaleString('en-IN')}</span></div>}

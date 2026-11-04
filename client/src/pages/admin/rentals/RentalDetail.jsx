@@ -13,6 +13,8 @@ function ReturnModal({ rental, onClose, onDone }) {
   const [form, setForm] = useState({
     actual_end_date: new Date().toISOString().split('T')[0],
     damage_fee: '',
+    discount_amount: '',
+    discount_reason: '',
     notes: ''
   })
   // Per-item damage tracking
@@ -163,6 +165,32 @@ function ReturnModal({ rental, onClose, onDone }) {
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
         </div>
       )}
+
+      {/* Discount/Waiver Section */}
+      <div className="bg-green-50 border border-green-100 rounded-xl p-4 space-y-3">
+        <p className="text-sm font-semibold text-green-700 flex items-center gap-2">
+          💰 Discount / Waiver (Optional)
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Discount Amount (₹)</label>
+            <input type="number" min="0" step="0.01" value={form.discount_amount}
+              onChange={e => setForm(f => ({ ...f, discount_amount: e.target.value }))} placeholder="0.00"
+              className="w-full border border-green-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-white" />
+            <p className="text-xs text-green-600 mt-1">Amount to waive from total bill</p>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Reason {parseFloat(form.discount_amount || 0) > 0 && <span className="text-red-500">*</span>}
+            </label>
+            <input value={form.discount_reason}
+              onChange={e => setForm(f => ({ ...f, discount_reason: e.target.value }))}
+              placeholder="e.g., Early return, goodwill"
+              required={parseFloat(form.discount_amount || 0) > 0}
+              className="w-full border border-green-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-white" />
+          </div>
+        </div>
+      </div>
 
       {/* Notes */}
       <div>
@@ -447,6 +475,12 @@ export default function AdminRentalDetail() {
               )}
               {parseFloat(rental.damage_fee) > 0 && (
                 <div className="flex justify-between text-red-600"><span>Damage Fee</span><span>₹{parseFloat(rental.damage_fee).toLocaleString('en-IN')}</span></div>
+              )}
+              {parseFloat(rental.discount_amount || 0) > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>Discount <span className="text-xs">({rental.discount_reason})</span></span>
+                  <span>−₹{parseFloat(rental.discount_amount).toLocaleString('en-IN')}</span>
+                </div>
               )}
               <div className="flex justify-between font-bold text-gray-800 pt-1.5 border-t border-gray-100">
                 <span>Total Bill</span>

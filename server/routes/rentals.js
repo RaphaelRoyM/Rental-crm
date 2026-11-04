@@ -305,7 +305,7 @@ router.put('/:id/dispatch', async (req, res) => {
 
 // PUT /api/rentals/:id/return
 router.put('/:id/return', async (req, res) => {
-  const { actual_end_date, damage_fee, notes } = req.body
+  const { actual_end_date, damage_fee, notes, discount_amount, discount_reason } = req.body
   if (!actual_end_date)
     return res.status(400).json({ message: 'actual_end_date is required' })
 
@@ -354,16 +354,18 @@ router.put('/:id/return', async (req, res) => {
       )
     }
 
-    const damageFee   = parseFloat(damage_fee) || 0
-    const totalAmount = subtotal + lateFee + damageFee
+    const damageFee     = parseFloat(damage_fee) || 0
+    const discountAmt   = parseFloat(discount_amount) || 0
+    const totalAmount   = Math.max(0, subtotal + lateFee + damageFee - discountAmt)
 
     const updated = await client.query(
       `UPDATE rentals
        SET status = 'returned', actual_end_date = $1,
            subtotal = $2, late_fee = $3, damage_fee = $4,
-           total_amount = $5, notes = COALESCE($6, notes)
-       WHERE id = $7 RETURNING *`,
-      [actual_end_date, subtotal, lateFee, damageFee, totalAmount, notes || null, rental.id]
+           discount_amount = $5, discount_reason = $6,
+           total_amount = $7, notes = COALESCE($8, notes)
+       WHERE id = $9 RETURNING *`,
+      [actual_end_date, subtotal, lateFee, damageFee, discountAmt, discount_reason || null, totalAmount, notes || null, rental.id]
     )
 
     await client.query('COMMIT')
