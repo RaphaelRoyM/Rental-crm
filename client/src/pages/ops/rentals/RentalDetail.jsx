@@ -249,25 +249,27 @@ export default function OpsRentalDetail() {
             <div className="px-5 py-4 border-b border-gray-100">
               <h3 className="font-semibold text-gray-700">Tools ({rental.items?.length || 0})</h3>
             </div>
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>{['Asset', 'Tool', 'Serial', 'Rate', 'Days', 'Subtotal'].map(h => (
-                  <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                  <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{h}</th>
                 ))}</tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {rental.items?.map(item => (
                   <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-5 py-3 font-mono text-xs text-indigo-600">{item.asset_code}</td>
+                    <td className="px-5 py-3 font-mono text-xs text-indigo-600 whitespace-nowrap">{item.asset_code}</td>
                     <td className="px-5 py-3"><p className="font-medium text-gray-800">{item.tool_name}</p><p className="text-xs text-gray-400">{item.category}</p></td>
-                    <td className="px-5 py-3 text-gray-500">{item.serial_number || '—'}</td>
-                    <td className="px-5 py-3 text-gray-600">₹{item.daily_rate}</td>
+                    <td className="px-5 py-3 text-gray-500 whitespace-nowrap">{item.serial_number || '—'}</td>
+                    <td className="px-5 py-3 text-gray-600 whitespace-nowrap">₹{item.daily_rate}</td>
                     <td className="px-5 py-3 text-gray-600">{item.days_rented ?? '—'}</td>
-                    <td className="px-5 py-3 font-medium text-gray-700">₹{parseFloat(item.subtotal || 0).toLocaleString('en-IN')}</td>
+                    <td className="px-5 py-3 font-medium text-gray-700 whitespace-nowrap">₹{parseFloat(item.subtotal || 0).toLocaleString('en-IN')}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           {/* Payments */}
@@ -278,26 +280,28 @@ export default function OpsRentalDetail() {
             {!rental.payments?.length ? (
               <p className="px-5 py-6 text-gray-400 text-sm">No payments recorded</p>
             ) : (
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>{['Date','Type','Method','Amount','By'].map(h => (
-                    <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                    <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{h}</th>
                   ))}</tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {rental.payments.map(p => (
                     <tr key={p.id} className="hover:bg-gray-50">
-                      <td className="px-5 py-3 text-gray-500">{new Date(p.paid_at).toLocaleDateString('en-IN')}</td>
+                      <td className="px-5 py-3 text-gray-500 whitespace-nowrap">{new Date(p.paid_at).toLocaleDateString('en-IN')}</td>
                       <td className="px-5 py-3"><Badge label={p.type} /></td>
-                      <td className="px-5 py-3 text-gray-500 capitalize">{p.method.replace('_',' ')}</td>
-                      <td className={`px-5 py-3 font-medium ${p.type === 'deposit_refund' ? 'text-red-500' : 'text-green-600'}`}>
+                      <td className="px-5 py-3 text-gray-500 capitalize whitespace-nowrap">{p.method.replace('_',' ')}</td>
+                      <td className={`px-5 py-3 font-medium whitespace-nowrap ${p.type === 'deposit_refund' ? 'text-red-500' : 'text-green-600'}`}>
                         {p.type === 'deposit_refund' ? '−' : '+'} ₹{parseFloat(p.amount).toLocaleString('en-IN')}
                       </td>
-                      <td className="px-5 py-3 text-gray-500">{p.received_by_name}</td>
+                      <td className="px-5 py-3 text-gray-500 whitespace-nowrap">{p.received_by_name}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </div>

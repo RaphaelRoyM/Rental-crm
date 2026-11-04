@@ -358,11 +358,12 @@ export default function AdminRentalDetail() {
             <div className="px-5 py-4 border-b border-gray-100">
               <h3 className="font-semibold text-gray-700">Rented Items ({rental.items?.length || 0})</h3>
             </div>
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
                   {['Asset ID', 'Tool', 'Serial No.', 'Daily Rate', 'Days', 'Subtotal'].map(h => (
-                    <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+                    <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -382,6 +383,7 @@ export default function AdminRentalDetail() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           {/* Payments */}
@@ -392,28 +394,30 @@ export default function AdminRentalDetail() {
             {rental.payments?.length === 0 ? (
               <p className="px-5 py-6 text-gray-400 text-sm">No payments recorded</p>
             ) : (
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
                     {['Date', 'Type', 'Method', 'Amount', 'Received By'].map(h => (
-                      <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+                      <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {rental.payments.map(p => (
                     <tr key={p.id} className="hover:bg-gray-50">
-                      <td className="px-5 py-3 text-gray-500">{new Date(p.paid_at).toLocaleDateString('en-IN')}</td>
+                      <td className="px-5 py-3 text-gray-500 whitespace-nowrap">{new Date(p.paid_at).toLocaleDateString('en-IN')}</td>
                       <td className="px-5 py-3"><Badge label={p.type} /></td>
-                      <td className="px-5 py-3 text-gray-500 capitalize">{p.method.replace('_', ' ')}</td>
-                      <td className={`px-5 py-3 font-medium ${p.type === 'deposit_refund' ? 'text-red-500' : p.type === 'deposit_deduction' ? 'text-rose-600' : 'text-green-600'}`}>
+                      <td className="px-5 py-3 text-gray-500 capitalize whitespace-nowrap">{p.method.replace('_', ' ')}</td>
+                      <td className={`px-5 py-3 font-medium whitespace-nowrap ${p.type === 'deposit_refund' ? 'text-red-500' : p.type === 'deposit_deduction' ? 'text-rose-600' : 'text-green-600'}`}>
                         {p.type === 'deposit_refund' ? '→ −' : p.type === 'deposit_deduction' ? '⬌' : '←'} ₹{parseFloat(p.amount).toLocaleString('en-IN')}
                       </td>
-                      <td className="px-5 py-3 text-gray-500">{p.received_by_name}</td>
+                      <td className="px-5 py-3 text-gray-500 whitespace-nowrap">{p.received_by_name}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </div>
