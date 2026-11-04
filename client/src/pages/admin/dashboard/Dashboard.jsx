@@ -48,7 +48,7 @@ export default function AdminDashboard() {
           api.get('/rentals/overdue'),
         ])
         setStats(s.data)
-        setRentals(ren.data.slice(0, 6))
+        setRentals((ren.data.data || ren.data).slice(0, 6))
         setOverdue(ov.data.slice(0, 5))
       } catch (e) { console.error(e) }
       finally { setLoading(false) }

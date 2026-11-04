@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, ClipboardList, Plus } from 'lucide-react'
+import { Search, ClipboardList, Plus, Download } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import api        from '../../../lib/api'
 import PageHeader  from '../../../components/common/PageHeader'
 import Badge       from '../../../components/common/Badge'
@@ -11,11 +12,62 @@ import Pagination  from '../../../components/common/Pagination'
 const STATUSES = ['', 'reserved', 'active', 'returned', 'cancelled']
 const LIMIT = 10
 
+const exportToExcel = async (status, search) => {
+  try {
+    const params = new URLSearchParams()
+    if (status) params.append('status', status)
+    if (search) params.append('search', search)
+    const r = await api.get(`/rentals/export?${params}`)
+    const rows = r.data
+
+    // Format rows for Excel
+    const data = rows.map(r => ({
+      'Rental #':          r.rental_number,
+      'Customer':          r.customer_name,
+      'Phone':             r.customer_phone,
+      'Email':             r.customer_email || '',
+      'Start Date':        r.start_date ? new Date(r.start_date).toLocaleDateString('en-IN') : '',
+      'Expected Return':   r.expected_end_date ? new Date(r.expected_end_date).toLocaleDateString('en-IN') : '',
+      'Actual Return':     r.actual_end_date ? new Date(r.actual_end_date).toLocaleDateString('en-IN') : '',
+      'Status':            r.status,
+      'Subtotal (₹)':      parseFloat(r.subtotal || 0),
+      'Late Fee (₹)':      parseFloat(r.late_fee || 0),
+      'Damage Fee (₹)':    parseFloat(r.damage_fee || 0),
+      'Total Amount (₹)':  parseFloat(r.total_amount || 0),
+      'Deposit (₹)':       parseFloat(r.deposit_amount || 0),
+      'Rent Collected (₹)':parseFloat(r.rent_paid || 0),
+      'Balance (₹)':       parseFloat(r.balance || 0),
+      'Tally':             r.tally_status || '',
+      'Created By':        r.created_by,
+      'Created At':        r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN') : '',
+      'Notes':             r.notes || '',
+    }))
+
+    const ws = XLSX.utils.json_to_sheet(data)
+
+    // Auto column widths
+    const colWidths = Object.keys(data[0] || {}).map(key => ({
+      wch: Math.max(key.length, ...data.map(row => String(row[key] || '').length)) + 2
+    }))
+    ws['!cols'] = colWidths
+
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Rentals')
+
+    const fileName = `Rentals_${new Date().toISOString().split('T')[0]}.xlsx`
+    XLSX.writeFile(wb, fileName)
+  } catch (e) {
+    console.error('Export failed:', e)
+    alert('Export failed. Please try again.')
+  }
+}
+
 export default function AdminRentals() {
   const [rentals, setRentals] = useState([])
   const [total, setTotal]     = useState(0)
   const [page, setPage]       = useState(1)
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
   const [search, setSearch]   = useState('')
   const [status, setStatus]   = useState('')
   const navigate = useNavigate()
@@ -43,7 +95,15 @@ export default function AdminRentals() {
   return (
     <div className="space-y-6">
       <PageHeader title="Rentals" subtitle={`${total} rentals`}
-        actions={<Button onClick={() => navigate('/admin/rentals/new')}><Plus size={16} /> New Rental</Button>} />
+        actions={
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={async () => { setExporting(true); await exportToExcel(status, search); setExporting(false) }} disabled={exporting}>
+              <Download size={16} />{exporting ? 'Exporting…' : 'Export'}
+            </Button>
+            <Button onClick={() => navigate('/admin/rentals/new')}><Plus size={16} /> New Rental</Button>
+          </div>
+        }
+      />
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">

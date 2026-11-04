@@ -71,6 +71,73 @@ router.get('/', async (req, res) => {
   }
 })
 
+// GET /api/rentals/export — returns ALL rentals for Excel export (no pagination)
+router.get('/export', async (req, res) => {
+  const { status, search } = req.query
+  try {
+    const conditions = []
+    const params = []
+    let i = 1
+
+    if (status) { conditions.push(`r.status = $${i++}`); params.push(status) }
+    if (search) {
+      conditions.push(`(r.rental_number ILIKE $${i} OR c.name ILIKE $${i} OR c.phone ILIKE $${i})`)
+      params.push(`%${search}%`); i++
+    }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+
+    const result = await pool.query(
+      `SELECT
+          r.rental_number,
+          c.name      AS customer_name,
+          c.phone     AS customer_phone,
+          c.email     AS customer_email,
+          r.start_date,
+          r.expected_end_date,
+          r.actual_end_date,
+          r.status,
+          r.subtotal,
+          r.late_fee,
+          r.damage_fee,
+          r.total_amount,
+          r.deposit_amount,
+          r.notes,
+          u.name      AS created_by,
+          r.created_at,
+          COALESCE(SUM(p.amount) FILTER (WHERE p.type NOT IN ('deposit','deposit_refund','deposit_deduction')), 0) AS rent_paid,
+          COALESCE(SUM(p.amount) FILTER (WHERE p.type = 'deposit'), 0)           AS deposit_paid,
+          COALESCE(SUM(p.amount) FILTER (WHERE p.type = 'deposit_refund'), 0)    AS deposit_refunded,
+          COALESCE(SUM(p.amount) FILTER (WHERE p.type = 'deposit_deduction'), 0) AS deposit_deducted
+       FROM rentals r
+       JOIN customers c ON c.id = r.customer_id
+       JOIN users u ON u.id = r.created_by
+       LEFT JOIN payments p ON p.rental_id = r.id
+       ${where}
+       GROUP BY r.id, c.id, u.id
+       ORDER BY r.created_at DESC`,
+      params
+    )
+
+    const rows = result.rows.map(r => {
+      const effectivePaid  = parseFloat(r.rent_paid) + parseFloat(r.deposit_deducted)
+      const balance        = parseFloat(r.total_amount) - effectivePaid
+      const depositBalance = parseFloat(r.deposit_paid) - parseFloat(r.deposit_refunded) - parseFloat(r.deposit_deducted)
+      let tally = ''
+      if (r.status === 'returned') {
+        if (balance > 0)                            tally = 'Underpaid'
+        else if (balance < 0 || depositBalance > 0) tally = 'Overpaid'
+        else                                        tally = 'Balanced'
+      }
+      return { ...r, tally_status: tally, balance, deposit_balance: depositBalance }
+    })
+
+    res.json(rows)
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+})
+
 // GET /api/rentals/overdue
 router.get('/overdue', async (req, res) => {
   try {

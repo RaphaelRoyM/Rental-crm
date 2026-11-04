@@ -19,7 +19,7 @@ export default function OpsDashboard() {
           api.get('/rentals?status=active'),
           api.get('/rentals/overdue'),
         ])
-        setActiveRentals(active.data)
+        setActiveRentals(active.data.data || active.data)
         setOverdue(ov.data)
       } catch (e) { console.error(e) }
       finally { setLoading(false) }
