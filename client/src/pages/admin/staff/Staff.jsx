@@ -7,7 +7,6 @@ import Badge         from '../../../components/common/Badge'
 import Modal         from '../../../components/common/Modal'
 import Spinner       from '../../../components/common/Spinner'
 import Pagination    from '../../../components/common/Pagination'
-import bcrypt from 'bcryptjs'
 
 const LIMIT = 10
 
